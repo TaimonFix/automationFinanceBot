@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: automationFinanceBot
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/automation_finance_bot?currentSchema=public
+    username: postgres
+    password: local
+bot:
+  name: fillWordFileBot
