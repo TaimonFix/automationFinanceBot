@@ -1,6 +1,7 @@
 package ru.vsu.cs.automationFinanceBot.bot;
-import org.springframework.beans.factory.annotation.Value;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
@@ -12,17 +13,19 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.vsu.cs.automationFinanceBot.Command;
+import ru.vsu.cs.automationFinanceBot.dto.QRCode;
+import ru.vsu.cs.automationFinanceBot.dto.Transaction;
 import ru.vsu.cs.automationFinanceBot.exception.QRCodeRecognizeException;
+import ru.vsu.cs.automationFinanceBot.service.TransactionService;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.URL;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class Bot extends TelegramLongPollingBot {
     private final BotToken botToken;
+    private final TransactionService transactionService;
 
     private final String START = "/start";
 
@@ -35,12 +38,9 @@ public class Bot extends TelegramLongPollingBot {
     private InlineKeyboardButton button2;
     private InlineKeyboardButton button3;
     private InlineKeyboardButton button4;
-
+    private Transaction transaction;
+    private QRCode qrCode;
     private Command command;
-
-    public Bot() {
-        this.botToken = new BotToken();
-    }
 
     @Override
     public String getBotUsername() {
@@ -72,14 +72,34 @@ public class Bot extends TelegramLongPollingBot {
                                 "3. Ты можешь вручную вписать соответствующую трату.";
                         sendMessage(user.getId(), text);
                         sendActionMenu(user.getId());
+                    } else switch (command) {
+                        case Command.QR_CATEGORY -> {
+                            transaction.setCategory(update.getMessage().getText());
+                            sendMessage(user.getId(), "Введи описание:");
+                            command = Command.QR_DESCRIPTION;
+                        }
+                        case QR_DESCRIPTION -> {
+                            transaction.setDescription(update.getMessage().getText());
+                            System.out.println(transaction);
+                            transactionService.addTransaction(transaction);
+                            // TODO: Сделать обработку ошибок на случай, если трата не сохранится
+                            sendMessage(user.getId(), "Трата сохранена.");
+                            sendMainMenu(user.getId());
+                        }
 
                     }
                 }
             } else if (update.getMessage().hasPhoto()) {
                 System.out.println(command);
-                if (command == Command.QR) {
+                if (command == Command.QR_PHOTO) {
                     try {
-                        System.out.println(inputQRPhoto(update.getMessage().getPhoto()));
+                        // TODO: заняться парсингом данных с QR кода с последующей отправкой в БД
+                        command = Command.QR_CATEGORY;
+                        QRCode qrCode = QRCodeReader.parse(inputQRPhoto(update.getMessage().getPhoto()));
+                        transaction.setSum(qrCode.getSum());
+                        transaction.setDateTime(qrCode.getDateTime());
+                        sendMessage(update.getMessage().getFrom().getId(), "Введи категорию");
+
                     } catch (IOException | TelegramApiException e) {
                         e.printStackTrace();
                     } catch (QRCodeRecognizeException e) {
@@ -101,13 +121,14 @@ public class Bot extends TelegramLongPollingBot {
 
     /**
      * Отправка сообщения пользователю
+     *
      * @param who id пользователя
      * @param txt сообщение
      */
     private void sendMessage(Long who, String txt) {
         SendMessage sm = SendMessage.builder()
-                         .chatId(who.toString()) // кому мы отправляем сообщение
-                         .text(txt).build(); // содержимое сообщения
+                .chatId(who.toString()) // кому мы отправляем сообщение
+                .text(txt).build(); // содержимое сообщения
 
         try {
             execute(sm);
@@ -118,9 +139,10 @@ public class Bot extends TelegramLongPollingBot {
 
     /**
      * Выводит меню с выбором варианта ответа
+     *
      * @param who id пользователя
      * @param txt текст меню
-     * @param kb Экземпляр класса InlineKeyboardMarkup, содержащий необходимые кнопки
+     * @param kb  Экземпляр класса InlineKeyboardMarkup, содержащий необходимые кнопки
      */
     private void sendMenu(Long who, String txt, InlineKeyboardMarkup kb) {
         SendMessage sm = SendMessage.builder().chatId(who.toString())
@@ -138,6 +160,8 @@ public class Bot extends TelegramLongPollingBot {
      * Главное меню
      */
     private void sendMainMenu(Long id) {
+        transaction = new Transaction(id);
+        transaction.setUserId(id);
         button1 = InlineKeyboardButton.builder()
                 .text("Ввод данных")
                 .callbackData("inputData")
@@ -161,6 +185,7 @@ public class Bot extends TelegramLongPollingBot {
      * 4. Выход в главное меню
      */
     private void sendActionMenu(Long id) {
+        transaction = new Transaction(id);
         button1 = InlineKeyboardButton.builder()
                 .text("QR-код")
                 .callbackData("qr")
@@ -187,18 +212,18 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private void qr(Long id) {
-        command = Command.QR;
+        command = Command.QR_PHOTO;
         sendMessage(id, "Пришли фото чека, содержащего QR-код");
     }
 
     private String inputQRPhoto(List<PhotoSize> photos) throws QRCodeRecognizeException,
-                                                        IOException, TelegramApiException {
+            IOException, TelegramApiException {
         PhotoSize photo = photos.getLast();
         GetFile getFile = new GetFile();
         getFile.setFileId(photo.getFileId());
         File file = execute(getFile);
         String photoPath = "https://api.telegram.org/file/bot" + getBotToken() + "/" + file.getFilePath();
-        return QRCodeReader.decodeQR(downloadPhoto(photoPath));
+        return QRCodeReader.decodeQR(QRCodeReader.downloadPhoto(photoPath));
     }
 
     private void fileFromBank() {
@@ -209,8 +234,5 @@ public class Bot extends TelegramLongPollingBot {
         System.out.println("manualInput");
     }
 
-    private BufferedImage downloadPhoto(String photoPath) throws IOException {
-        URL url = new URL(photoPath);
-        return ImageIO.read(url);
-    }
+
 }
