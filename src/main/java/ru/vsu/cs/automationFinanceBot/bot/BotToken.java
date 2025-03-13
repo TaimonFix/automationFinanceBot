@@ -1,5 +1,6 @@
 package ru.vsu.cs.automationFinanceBot.bot;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -7,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @Component
+@Slf4j
 public class BotToken {
     private String token;
 
@@ -22,7 +24,7 @@ public class BotToken {
         try {
             return Files.readString(Path.of("src/main/java/ru/vsu/cs/automationFinanceBot/bot/data/botToken.txt"));
         } catch (IOException e) {
-            System.out.println("Произошла ошибка при чтении токена.");
+            log.error("Произошла ошибка при чтении токена.");
         }
         return null;
 

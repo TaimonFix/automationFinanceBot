@@ -13,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.vsu.cs.automationFinanceBot.Command;
+import ru.vsu.cs.automationFinanceBot.Operation;
 import ru.vsu.cs.automationFinanceBot.dto.QRCode;
 import ru.vsu.cs.automationFinanceBot.dto.Transaction;
 import ru.vsu.cs.automationFinanceBot.exception.QRCodeRecognizeException;
@@ -27,7 +28,7 @@ public class Bot extends TelegramLongPollingBot {
     private final BotToken botToken;
     private final TransactionService transactionService;
 
-    private final String START = "/start";
+    private final String PREFIX_COMMAND = "/";
 
     @Value("${bot.name}")
     private String botName;
@@ -39,8 +40,7 @@ public class Bot extends TelegramLongPollingBot {
     private InlineKeyboardButton button3;
     private InlineKeyboardButton button4;
     private Transaction transaction;
-    private QRCode qrCode;
-    private Command command;
+    private Operation operation;
 
     @Override
     public String getBotUsername() {
@@ -56,69 +56,115 @@ public class Bot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage()) {
             if (update.getMessage().hasText()) {
-                var message = update.getMessage();
-                var user = message.getFrom();
-                System.out.println(user.getFirstName() + " wrote " + message.getText());
-                System.out.println(user.getId());
-
-                if (update.hasMessage()) {
-                    if (message.getText().contains(START)) {
-                        String text = "Привет! Я - финансовый помощник.\n\nЯ помогу тебе вести бюджет и оптимизировать твои траты." +
-                                "\nДавай начнем с ввода данных. Я умею обрабатывать информацию следующими способами:\n" +
-                                "1. Ты можешь отправить изображение с чеком, содержащим QR код - я его разберу и внесу " +
-                                "траты в свой дневник.\n" +
-                                "2. Ты можешь прислать .xlsx/.csv файл с выгрузкой расходов за определенный период из банка " +
-                                "(СБЕР, Т-Банк, Газпромбанк) - я проанализирую содержимое и внесу траты в свой дневник.\n" +
-                                "3. Ты можешь вручную вписать соответствующую трату.";
-                        sendMessage(user.getId(), text);
-                        sendActionMenu(user.getId());
-                    } else switch (command) {
-                        case Command.QR_CATEGORY -> {
-                            transaction.setCategory(update.getMessage().getText());
-                            sendMessage(user.getId(), "Введи описание:");
-                            command = Command.QR_DESCRIPTION;
-                        }
-                        case QR_DESCRIPTION -> {
-                            transaction.setDescription(update.getMessage().getText());
-                            System.out.println(transaction);
-                            transactionService.addTransaction(transaction);
-                            // TODO: Сделать обработку ошибок на случай, если трата не сохранится
-                            sendMessage(user.getId(), "Трата сохранена.");
-                            sendMainMenu(user.getId());
-                        }
-
-                    }
-                }
+                textHandler(update);
             } else if (update.getMessage().hasPhoto()) {
-                System.out.println(command);
-                if (command == Command.QR_PHOTO) {
-                    try {
-                        // TODO: заняться парсингом данных с QR кода с последующей отправкой в БД
-                        command = Command.QR_CATEGORY;
-                        QRCode qrCode = QRCodeReader.parse(inputQRPhoto(update.getMessage().getPhoto()));
-                        transaction.setSum(qrCode.getSum());
-                        transaction.setDateTime(qrCode.getDateTime());
-                        sendMessage(update.getMessage().getFrom().getId(), "Введи категорию");
-
-                    } catch (IOException | TelegramApiException e) {
-                        e.printStackTrace();
-                    } catch (QRCodeRecognizeException e) {
-                        sendMessage(update.getMessage().getFrom().getId(), e.getMessage());
-                    }
-                }
+                photoHandler(update);
             }
         } else if (update.hasCallbackQuery()) {
-            var callbackData = update.getCallbackQuery().getData();
-            var userId = update.getCallbackQuery().getFrom().getId();
-            switch (callbackData) {
-                case "qr" -> qr(userId);
-                case "fileFromBank" -> fileFromBank();
-                case "manualInput" -> manualInput();
-                case "mainMenu" -> sendMainMenu(userId);
+            callbackQueryHandler(update);
+        }
+    }
+
+    /**
+     * Обработчик поступивших текстовых сообщений от пользователе
+     * @param update
+     */
+    private void textHandler(Update update) {
+        var message = update.getMessage();
+        var user = message.getFrom();
+        System.out.println(user.getFirstName() + " wrote " + message.getText());
+        System.out.println(user.getId());
+
+        if (message.getText().startsWith(PREFIX_COMMAND)) {
+            operationHandler(update);
+        } else switch (operation) {
+            case Operation.QR_PHOTO -> {
+                sendMessage(user.getId(), "Некорректный ввод");
+                qr(user.getId());
+            }
+            case Operation.QR_CATEGORY -> {
+                transaction.setCategory(update.getMessage().getText());
+                sendMessage(user.getId(), "Введи описание:");
+                operation = Operation.QR_DESCRIPTION;
+            }
+            case QR_DESCRIPTION -> {
+                transaction.setDescription(update.getMessage().getText());
+                System.out.println(transaction);
+                transactionService.addTransaction(transaction);
+                // TODO: Сделать обработку ошибок на случай, если трата не сохранится
+                sendMessage(user.getId(), "Трата сохранена.");
+                // TODO: Вывести юзеру информацию о поступившей трате
+                sendMainMenu(user.getId());
+            }
+            case null, default -> {
+                sendMessage(user.getId(), "Некорректный ввод.");
+                sendMainMenu(user.getId());
+            }
+
+        }
+    }
+
+    /**
+     * Обработчик поступивших команд
+     */
+    private void operationHandler(Update update) {
+        var message = update.getMessage();
+        var user = message.getFrom();
+
+        // TODO: отрефакторить обработку команд
+        if (message.getText().startsWith(Command.START.getCommandName())) {
+            String text = "Привет! Я - финансовый помощник.\n\nЯ помогу тебе вести бюджет и оптимизировать твои траты." +
+                    "\nДавай начнем с ввода данных. Я умею обрабатывать информацию следующими способами:\n" +
+                    "1. Ты можешь отправить изображение с чеком, содержащим QR код - я его разберу и внесу " +
+                    "траты в свой дневник.\n" +
+                    "2. Ты можешь прислать .xlsx/.csv файл с выгрузкой расходов за определенный период из банка " +
+                    "(СБЕР, Т-Банк, Газпромбанк) - я проанализирую содержимое и внесу траты в свой дневник.\n" +
+                    "3. Ты можешь вручную вписать соответствующую трату.";
+            sendMessage(user.getId(), text);
+            sendInputDataMenu(user.getId());
+        } else if (message.getText().startsWith(Command.MENU.getCommandName())) {
+            sendMessage(user.getId(), "Высылаю меню...");
+            sendMainMenu(user.getId());
+
+        }
+    }
+
+    /**
+     * Обработчик поступивших изображений
+     */
+    private void photoHandler(Update update) {
+        if (operation == Operation.QR_PHOTO) {
+            try {
+                // TODO: заняться парсингом данных с QR кода с последующей отправкой в БД
+                operation = Operation.QR_CATEGORY;
+                QRCode qrCode = QRCodeReader.parse(inputQRPhoto(update.getMessage().getPhoto()));
+                transaction.setSum(qrCode.getSum());
+                transaction.setDateTime(qrCode.getDateTime());
+                sendMessage(update.getMessage().getFrom().getId(), "Введи категорию");
+
+            } catch (IOException | TelegramApiException e) {
+                e.printStackTrace();
+            } catch (QRCodeRecognizeException e) {
+                sendMessage(update.getMessage().getFrom().getId(), e.getMessage());
             }
         }
     }
 
+    /**
+     * Обработчик нажатой кнопки
+     */
+    private void callbackQueryHandler(Update update) {
+        var callbackData = update.getCallbackQuery().getData();
+        var userId = update.getCallbackQuery().getFrom().getId();
+        switch (callbackData) {
+            case "qr" -> qr(userId);
+            case "fileFromBank" -> fileFromBank();
+            case "manualInput" -> manualInput();
+            case "mainMenu" -> sendMainMenu(userId);
+            case "inputData" -> sendInputDataMenu(userId);
+            case "analysis" -> sendAnalysisDataMenu(userId);
+        }
+    }
     /**
      * Отправка сообщения пользователю
      *
@@ -161,7 +207,7 @@ public class Bot extends TelegramLongPollingBot {
      */
     private void sendMainMenu(Long id) {
         transaction = new Transaction(id);
-        transaction.setUserId(id);
+        operation = Operation.MAIN_MENU;
         button1 = InlineKeyboardButton.builder()
                 .text("Ввод данных")
                 .callbackData("inputData")
@@ -184,8 +230,9 @@ public class Bot extends TelegramLongPollingBot {
      * 3. ручной ввод
      * 4. Выход в главное меню
      */
-    private void sendActionMenu(Long id) {
+    private void sendInputDataMenu(Long id) {
         transaction = new Transaction(id);
+        operation = Operation.INPUT_DATA_MENU;
         button1 = InlineKeyboardButton.builder()
                 .text("QR-код")
                 .callbackData("qr")
@@ -211,8 +258,13 @@ public class Bot extends TelegramLongPollingBot {
         sendMenu(id, "Выбери на клавиатуре соответствующее действие:", keyboardMarkup);
     }
 
+    private void sendAnalysisDataMenu(Long id) {
+        operation = Operation.ANALYSIS_DATA_MENU;
+        sendMessage(id, "Выберите период для анализа.");
+    }
+
     private void qr(Long id) {
-        command = Command.QR_PHOTO;
+        operation = Operation.QR_PHOTO;
         sendMessage(id, "Пришли фото чека, содержащего QR-код");
     }
 
@@ -233,6 +285,4 @@ public class Bot extends TelegramLongPollingBot {
     private void manualInput() {
         System.out.println("manualInput");
     }
-
-
 }
