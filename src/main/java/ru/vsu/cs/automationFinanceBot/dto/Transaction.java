@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.Locale;
 
 @Entity
 @RequiredArgsConstructor
@@ -13,6 +16,12 @@ import java.time.LocalDateTime;
 @ToString
 @Table(name = "transaction")
 public class Transaction {
+
+    public static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+
+            .appendPattern("yyyyMMdd'T'HHmmss")
+            .toFormatter(Locale.forLanguageTag("ru"));
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,5 +37,12 @@ public class Transaction {
 
     public Transaction(Long userId) {
         this.userId = userId;
+    }
+
+    public Transaction(LocalDateTime dateTime, String category, String description, float sum) {
+        this.dateTime = dateTime;
+        this.category = category;
+        this.description = description;
+        this.sum = sum;
     }
 }
