@@ -17,11 +17,6 @@ import java.util.Locale;
 @Table(name = "transaction")
 public class Transaction {
 
-    public static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
-
-            .appendPattern("yyyyMMdd'T'HHmmss")
-            .toFormatter(Locale.forLanguageTag("ru"));
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

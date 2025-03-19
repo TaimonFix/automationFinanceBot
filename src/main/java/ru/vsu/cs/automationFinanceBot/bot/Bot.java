@@ -12,12 +12,13 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import ru.vsu.cs.automationFinanceBot.Command;
-import ru.vsu.cs.automationFinanceBot.Operation;
+import ru.vsu.cs.automationFinanceBot.enums.Command;
+import ru.vsu.cs.automationFinanceBot.enums.Operation;
 import ru.vsu.cs.automationFinanceBot.dto.QRCode;
 import ru.vsu.cs.automationFinanceBot.dto.Transaction;
-import ru.vsu.cs.automationFinanceBot.exception.QRCodeRecognizeException;
-import ru.vsu.cs.automationFinanceBot.service.TransactionService;
+import ru.vsu.cs.automationFinanceBot.exceptions.QRCodeRecognizeException;
+import ru.vsu.cs.automationFinanceBot.parsers.QRCodeReader;
+import ru.vsu.cs.automationFinanceBot.services.TransactionService;
 
 import java.io.IOException;
 import java.util.List;
