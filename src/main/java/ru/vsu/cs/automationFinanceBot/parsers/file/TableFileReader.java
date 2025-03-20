@@ -1,4 +1,4 @@
-package ru.vsu.cs.automationFinanceBot.parsers;
+package ru.vsu.cs.automationFinanceBot.parsers.file;
 
 import ru.vsu.cs.automationFinanceBot.dto.Transaction;
 

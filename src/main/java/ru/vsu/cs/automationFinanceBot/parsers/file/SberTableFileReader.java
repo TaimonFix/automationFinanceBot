@@ -1,12 +1,12 @@
-package ru.vsu.cs.automationFinanceBot.parsers;
+package ru.vsu.cs.automationFinanceBot.parsers.file;
 
 import org.apache.poi.ss.usermodel.*;
 import ru.vsu.cs.automationFinanceBot.dto.Transaction;
+import ru.vsu.cs.automationFinanceBot.parsers.date.RUSDateReader;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -56,7 +56,7 @@ public class SberTableFileReader implements TableFileReader {
                 if (row.getRowNum() != 0 && dateColumn != -1 &&
                         categoryColumn != -1 && sumColumn != -1 && descriptionColumn != -1) {
 
-                    LocalDateTime dateTime = RusDateReader.parse(row.getCell(dateColumn).toString());
+                    LocalDateTime dateTime = RUSDateReader.parse(row.getCell(dateColumn).toString());
                     String category = row.getCell(categoryColumn).toString();
                     float sum = Float.parseFloat(row.getCell(sumColumn).toString());
                     String description = row.getCell(descriptionColumn).toString();
@@ -72,10 +72,10 @@ public class SberTableFileReader implements TableFileReader {
     }
 
 
-    public static void main(String[] args) {
-        TableFileReader fileReader = new SberTableFileReader();
-        List<Transaction> transactions = new ArrayList<>();
-         transactions = fileReader.read("excel_1.xlsx");
-        System.out.println(transactions);
-    }
+//    public static void main(String[] args) {
+//        TableFileReader fileReader = new SberTableFileReader();
+//        List<Transaction> transactions = new ArrayList<>();
+//         transactions = fileReader.read("excel_1.xlsx");
+//        System.out.println(transactions);
+//    }
 }

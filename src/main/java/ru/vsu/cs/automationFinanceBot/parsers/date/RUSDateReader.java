@@ -1,4 +1,4 @@
-package ru.vsu.cs.automationFinanceBot.parsers;
+package ru.vsu.cs.automationFinanceBot.parsers.date;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -6,7 +6,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RusDateReader {
+public class RUSDateReader {
     private static final Map<String, String> MONTHS_MAP = new HashMap<>();
 
     static {
