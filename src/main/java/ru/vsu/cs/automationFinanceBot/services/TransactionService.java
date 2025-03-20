@@ -18,7 +18,7 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
 
-    public boolean addTransactions(List<Transaction> transactions) {
-        return transactions.addAll(transactions);
+    public List<Transaction> addTransactions(List<Transaction> transactions) {
+        return transactionRepository.saveAll(transactions);
     }
 }

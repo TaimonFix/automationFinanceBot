@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface TableFileReader {
 
-    List<Transaction> read(String filepath);
+    List<Transaction> read(Long userId, String filepath);
 }

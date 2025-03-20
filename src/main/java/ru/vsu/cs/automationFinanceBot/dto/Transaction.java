@@ -28,13 +28,14 @@ public class Transaction {
     private String category;
     private String description;
     @NotNull
-    private float sum;
+    private Float sum;
 
     public Transaction(Long userId) {
         this.userId = userId;
     }
 
-    public Transaction(LocalDateTime dateTime, String category, String description, float sum) {
+    public Transaction(Long userId, LocalDateTime dateTime, String category, String description, Float sum) {
+        this.userId = userId;
         this.dateTime = dateTime;
         this.category = category;
         this.description = description;

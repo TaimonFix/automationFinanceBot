@@ -165,18 +165,15 @@ public class Bot extends TelegramLongPollingBot {
     private void documentHandler(Update update) {
         if (operation == Operation.INPUT_FILE) {
             try {
+                Long userId = update.getMessage().getFrom().getId();
                 TableFileReader fileReader = new SberTableFileReader();
-                List<Transaction> transactions = fileReader.read(
+                List<Transaction> transactions = fileReader.read(userId,
                         inputTableFile(update.getMessage().getDocument()));
                 System.out.println(transactions);
-                boolean result = transactionService.addTransactions(transactions);
-                String text;
-                if (result) {
-                    text = "Данные сохранены";
-                } else {
-                    text = " Данные не могут быть обработаны.";
-                }
-                sendMessage(update.getMessage().getFrom().getId(), text);
+                transactionService.addTransactions(transactions);
+                String text = "Данные сохранены";
+                // TODO: обработать случай, если данные не занесутся
+                sendMessage(userId, text);
 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
