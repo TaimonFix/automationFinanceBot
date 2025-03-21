@@ -1,17 +1,16 @@
-package ru.vsu.cs.automationFinanceBot.bot;
+package ru.vsu.cs.automationFinanceBot.parsers.file;
 
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
 import ru.vsu.cs.automationFinanceBot.dto.QRCode;
-import ru.vsu.cs.automationFinanceBot.exception.QRCodeRecognizeException;
+import ru.vsu.cs.automationFinanceBot.exceptions.QRCodeRecognizeException;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 
 import static ru.vsu.cs.automationFinanceBot.dto.QRCode.FORMATTER;
 

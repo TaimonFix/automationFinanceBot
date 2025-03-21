@@ -6,20 +6,27 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Document;
 import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import ru.vsu.cs.automationFinanceBot.Command;
-import ru.vsu.cs.automationFinanceBot.Operation;
+import ru.vsu.cs.automationFinanceBot.enums.Command;
+import ru.vsu.cs.automationFinanceBot.enums.Operation;
 import ru.vsu.cs.automationFinanceBot.dto.QRCode;
 import ru.vsu.cs.automationFinanceBot.dto.Transaction;
-import ru.vsu.cs.automationFinanceBot.exception.QRCodeRecognizeException;
-import ru.vsu.cs.automationFinanceBot.service.TransactionService;
+import ru.vsu.cs.automationFinanceBot.exceptions.QRCodeRecognizeException;
+import ru.vsu.cs.automationFinanceBot.parsers.file.QRCodeReader;
+import ru.vsu.cs.automationFinanceBot.parsers.file.SberTableFileReader;
+import ru.vsu.cs.automationFinanceBot.parsers.file.TableFileReader;
+import ru.vsu.cs.automationFinanceBot.services.TransactionService;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @Component
@@ -59,6 +66,8 @@ public class Bot extends TelegramLongPollingBot {
                 textHandler(update);
             } else if (update.getMessage().hasPhoto()) {
                 photoHandler(update);
+            } else if (update.getMessage().hasDocument()) {
+                documentHandler(update);
             }
         } else if (update.hasCallbackQuery()) {
             callbackQueryHandler(update);
@@ -78,16 +87,38 @@ public class Bot extends TelegramLongPollingBot {
         if (message.getText().startsWith(PREFIX_COMMAND)) {
             operationHandler(update);
         } else switch (operation) {
-            case Operation.QR_PHOTO -> {
+            case QR_PHOTO -> {
                 sendMessage(user.getId(), "Некорректный ввод");
                 qr(user.getId());
             }
-            case Operation.QR_CATEGORY -> {
+            case INPUT_DATE -> {
+                DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+                try {
+                    transaction = new Transaction(user.getId());
+                    transaction.setDateTime(LocalDateTime.parse(update.getMessage().getText(),dateFormat));
+                    sendMessage(user.getId(), "Введи сумму расхода:");
+                    operation = Operation.INPUT_SUM;
+                } catch (DateTimeParseException e) {
+                    System.out.println(e.getMessage());
+                    sendMessage(user.getId(), "Неверный формат даты. Введите в формате: '01.01.2020 18:53'");
+                }
+            }
+            case INPUT_SUM -> {
+                try {
+                    transaction.setSum(Float.parseFloat(update.getMessage().getText()));
+                    sendMessage(user.getId(), "Введи категорию расхода:");
+                    operation = Operation.INPUT_CATEGORY;
+
+                } catch (NumberFormatException e) {
+                    sendMessage(user.getId(),"Неверный формат числа. Введите в одном из форматах: '255', '255.99'");
+                }
+            }
+            case INPUT_CATEGORY -> {
                 transaction.setCategory(update.getMessage().getText());
                 sendMessage(user.getId(), "Введи описание:");
-                operation = Operation.QR_DESCRIPTION;
+                operation = Operation.INPUT_DESCRIPTION;
             }
-            case QR_DESCRIPTION -> {
+            case INPUT_DESCRIPTION -> {
                 transaction.setDescription(update.getMessage().getText());
                 System.out.println(transaction);
                 transactionService.addTransaction(transaction);
@@ -100,7 +131,6 @@ public class Bot extends TelegramLongPollingBot {
                 sendMessage(user.getId(), "Некорректный ввод.");
                 sendMainMenu(user.getId());
             }
-
         }
     }
 
@@ -113,19 +143,22 @@ public class Bot extends TelegramLongPollingBot {
 
         // TODO: отрефакторить обработку команд
         if (message.getText().startsWith(Command.START.getCommandName())) {
-            String text = "Привет! Я - финансовый помощник.\n\nЯ помогу тебе вести бюджет и оптимизировать твои траты." +
-                    "\nДавай начнем с ввода данных. Я умею обрабатывать информацию следующими способами:\n" +
-                    "1. Ты можешь отправить изображение с чеком, содержащим QR код - я его разберу и внесу " +
-                    "траты в свой дневник.\n" +
-                    "2. Ты можешь прислать .xlsx/.csv файл с выгрузкой расходов за определенный период из банка " +
-                    "(СБЕР, Т-Банк, Газпромбанк) - я проанализирую содержимое и внесу траты в свой дневник.\n" +
-                    "3. Ты можешь вручную вписать соответствующую трату.";
+            String text = """
+                    Привет! Я - финансовый помощник.
+                    
+                    Я помогу тебе вести бюджет и оптимизировать твои траты.\
+                    
+                    Давай начнем с ввода данных. Я умею обрабатывать информацию следующими способами:
+                    1. Ты можешь отправить изображение с чеком, содержащим QR код - я его разберу и внесу \
+                    траты в свой дневник.
+                    2. Ты можешь прислать .xlsx/.csv файл с выгрузкой расходов за определенный период из банка \
+                    (СБЕР, Т-Банк, Газпромбанк) - я проанализирую содержимое и внесу траты в свой дневник.
+                    3. Ты можешь вручную вписать соответствующую трату.""";
             sendMessage(user.getId(), text);
             sendInputDataMenu(user.getId());
         } else if (message.getText().startsWith(Command.MENU.getCommandName())) {
             sendMessage(user.getId(), "Высылаю меню...");
             sendMainMenu(user.getId());
-
         }
     }
 
@@ -135,17 +168,45 @@ public class Bot extends TelegramLongPollingBot {
     private void photoHandler(Update update) {
         if (operation == Operation.QR_PHOTO) {
             try {
-                // TODO: заняться парсингом данных с QR кода с последующей отправкой в БД
-                operation = Operation.QR_CATEGORY;
+                operation = Operation.INPUT_CATEGORY;
+                // TODO: Добавить возможность присылать PDF файл, содержащий QR код
+                // TODO: Добавить обработку нескольких изображений
                 QRCode qrCode = QRCodeReader.parse(inputQRPhoto(update.getMessage().getPhoto()));
                 transaction.setSum(qrCode.getSum());
                 transaction.setDateTime(qrCode.getDateTime());
                 sendMessage(update.getMessage().getFrom().getId(), "Введи категорию");
-
             } catch (IOException | TelegramApiException e) {
                 e.printStackTrace();
             } catch (QRCodeRecognizeException e) {
                 sendMessage(update.getMessage().getFrom().getId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Обработчик присланного документа
+     */
+    private void documentHandler(Update update) {
+        Long userId = update.getMessage().getFrom().getId();
+        if (operation == Operation.INPUT_FILE) {
+            try {
+                TableFileReader fileReader = new SberTableFileReader();
+                List<Transaction> transactions = fileReader.read(userId,
+                        inputTableFile(update.getMessage().getDocument()));
+                if (transactions.isEmpty()) {
+                    throw new NullPointerException();
+                }
+                System.out.println(transactions);
+                transactionService.addTransactions(transactions);
+                String text = "Данные сохранены";
+                // TODO: обработать случай, если данные не занесутся
+                sendMessage(userId, text);
+
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e) {
+                sendMessage(userId, "Произошла ошибка при чтении данных из файла.");
+                sendInputDataMenu(userId);
             }
         }
     }
@@ -158,8 +219,8 @@ public class Bot extends TelegramLongPollingBot {
         var userId = update.getCallbackQuery().getFrom().getId();
         switch (callbackData) {
             case "qr" -> qr(userId);
-            case "fileFromBank" -> fileFromBank();
-            case "manualInput" -> manualInput();
+            case "fileFromBank" -> fileFromBank(userId);
+            case "manualInput" -> manualInput(userId);
             case "mainMenu" -> sendMainMenu(userId);
             case "inputData" -> sendInputDataMenu(userId);
             case "analysis" -> sendAnalysisDataMenu(userId);
@@ -206,7 +267,6 @@ public class Bot extends TelegramLongPollingBot {
      * Главное меню
      */
     private void sendMainMenu(Long id) {
-        transaction = new Transaction(id);
         operation = Operation.MAIN_MENU;
         button1 = InlineKeyboardButton.builder()
                 .text("Ввод данных")
@@ -231,7 +291,6 @@ public class Bot extends TelegramLongPollingBot {
      * 4. Выход в главное меню
      */
     private void sendInputDataMenu(Long id) {
-        transaction = new Transaction(id);
         operation = Operation.INPUT_DATA_MENU;
         button1 = InlineKeyboardButton.builder()
                 .text("QR-код")
@@ -264,6 +323,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private void qr(Long id) {
+        transaction = new Transaction(id);
         operation = Operation.QR_PHOTO;
         sendMessage(id, "Пришли фото чека, содержащего QR-код");
     }
@@ -271,18 +331,49 @@ public class Bot extends TelegramLongPollingBot {
     private String inputQRPhoto(List<PhotoSize> photos) throws QRCodeRecognizeException,
             IOException, TelegramApiException {
         PhotoSize photo = photos.getLast();
-        GetFile getFile = new GetFile();
-        getFile.setFileId(photo.getFileId());
-        File file = execute(getFile);
-        String photoPath = "https://api.telegram.org/file/bot" + getBotToken() + "/" + file.getFilePath();
+        String photoPath = getFilePath(photo.getFileId());
         return QRCodeReader.decodeQR(QRCodeReader.downloadPhoto(photoPath));
     }
 
-    private void fileFromBank() {
+    private void fileFromBank(Long id) {
+        transaction = new Transaction(id);
         System.out.println("fileFromBank");
+        String text = """
+                Я умею считывать информацию с файлов форматов .xlsx/.xls.\
+                Ты можешь выгрузить информацию о расходах из сайта банка (СБЕР, Т-Банк) за определенный\
+                период, а я внесу необходимую информацию в базу.
+                
+                Пришли мне файл с информацией о расходах в формате .xlsx/.xls""";
+        sendMessage(id, text);
+        operation = Operation.INPUT_FILE;
     }
 
-    private void manualInput() {
+    private void manualInput(Long id) {
+        transaction = new Transaction(id);
         System.out.println("manualInput");
+        String text = """
+                Ты можешь внести конкретную трату, а я внесу необходимую информацию в базу.
+                
+                Введи дату операции:
+                """;
+        sendMessage(id, text);
+        operation = Operation.INPUT_DATE;
+    }
+
+    private String inputTableFile(Document document) throws TelegramApiException {
+       return getFilePath(document.getFileId());
+    }
+
+
+    /**
+     * Метод для получения расположения файла в облаке Telegram
+     * @param fileId строковый идентификатор файла
+     * @throws TelegramApiException
+     */
+    private String getFilePath(String fileId) throws TelegramApiException {
+        GetFile getFile = new GetFile();
+        getFile.setFileId(fileId);
+        File file = execute(getFile);
+        return "https://api.telegram.org/file/bot" + getBotToken() + "/" + file.getFilePath();
     }
 }

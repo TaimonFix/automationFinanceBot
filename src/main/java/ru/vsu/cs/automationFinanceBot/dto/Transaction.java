@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.Locale;
 
 @Entity
 @RequiredArgsConstructor
@@ -13,6 +16,7 @@ import java.time.LocalDateTime;
 @ToString
 @Table(name = "transaction")
 public class Transaction {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,9 +28,17 @@ public class Transaction {
     private String category;
     private String description;
     @NotNull
-    private float sum;
+    private Float sum;
 
     public Transaction(Long userId) {
         this.userId = userId;
+    }
+
+    public Transaction(Long userId, LocalDateTime dateTime, String category, String description, Float sum) {
+        this.userId = userId;
+        this.dateTime = dateTime;
+        this.category = category;
+        this.description = description;
+        this.sum = sum;
     }
 }
