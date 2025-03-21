@@ -2,8 +2,12 @@ package ru.vsu.cs.automationFinanceBot.enums;
 
 public enum Operation {
     QR_PHOTO,
-    QR_CATEGORY,
-    QR_DESCRIPTION,
+    INPUT_DATE,
+    INPUT_DATE_START,
+    INPUT_DATE_END,
+    INPUT_SUM,
+    INPUT_CATEGORY,
+    INPUT_DESCRIPTION,
     INPUT_FILE,
     MANUAL_INPUT,
     INPUT_DATA_MENU,

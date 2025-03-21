@@ -24,6 +24,9 @@ import ru.vsu.cs.automationFinanceBot.parsers.file.TableFileReader;
 import ru.vsu.cs.automationFinanceBot.services.TransactionService;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @Component
@@ -88,12 +91,34 @@ public class Bot extends TelegramLongPollingBot {
                 sendMessage(user.getId(), "Некорректный ввод");
                 qr(user.getId());
             }
-            case QR_CATEGORY -> {
+            case INPUT_DATE -> {
+                DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+                try {
+                    transaction = new Transaction(user.getId());
+                    transaction.setDateTime(LocalDateTime.parse(update.getMessage().getText(),dateFormat));
+                    sendMessage(user.getId(), "Введи сумму расхода:");
+                    operation = Operation.INPUT_SUM;
+                } catch (DateTimeParseException e) {
+                    System.out.println(e.getMessage());
+                    sendMessage(user.getId(), "Неверный формат даты. Введите в формате: '01.01.2020 18:53'");
+                }
+            }
+            case INPUT_SUM -> {
+                try {
+                    transaction.setSum(Float.parseFloat(update.getMessage().getText()));
+                    sendMessage(user.getId(), "Введи категорию расхода:");
+                    operation = Operation.INPUT_CATEGORY;
+
+                } catch (NumberFormatException e) {
+                    sendMessage(user.getId(),"Неверный формат числа. Введите в одном из форматах: '255', '255.99'");
+                }
+            }
+            case INPUT_CATEGORY -> {
                 transaction.setCategory(update.getMessage().getText());
                 sendMessage(user.getId(), "Введи описание:");
-                operation = Operation.QR_DESCRIPTION;
+                operation = Operation.INPUT_DESCRIPTION;
             }
-            case QR_DESCRIPTION -> {
+            case INPUT_DESCRIPTION -> {
                 transaction.setDescription(update.getMessage().getText());
                 System.out.println(transaction);
                 transactionService.addTransaction(transaction);
@@ -106,7 +131,6 @@ public class Bot extends TelegramLongPollingBot {
                 sendMessage(user.getId(), "Некорректный ввод.");
                 sendMainMenu(user.getId());
             }
-
         }
     }
 
@@ -144,7 +168,7 @@ public class Bot extends TelegramLongPollingBot {
     private void photoHandler(Update update) {
         if (operation == Operation.QR_PHOTO) {
             try {
-                operation = Operation.QR_CATEGORY;
+                operation = Operation.INPUT_CATEGORY;
                 // TODO: Добавить возможность присылать PDF файл, содержащий QR код
                 // TODO: Добавить обработку нескольких изображений
                 QRCode qrCode = QRCodeReader.parse(inputQRPhoto(update.getMessage().getPhoto()));
@@ -163,12 +187,15 @@ public class Bot extends TelegramLongPollingBot {
      * Обработчик присланного документа
      */
     private void documentHandler(Update update) {
+        Long userId = update.getMessage().getFrom().getId();
         if (operation == Operation.INPUT_FILE) {
             try {
-                Long userId = update.getMessage().getFrom().getId();
                 TableFileReader fileReader = new SberTableFileReader();
                 List<Transaction> transactions = fileReader.read(userId,
                         inputTableFile(update.getMessage().getDocument()));
+                if (transactions.isEmpty()) {
+                    throw new NullPointerException();
+                }
                 System.out.println(transactions);
                 transactionService.addTransactions(transactions);
                 String text = "Данные сохранены";
@@ -177,6 +204,9 @@ public class Bot extends TelegramLongPollingBot {
 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
+            } catch (NullPointerException e) {
+                sendMessage(userId, "Произошла ошибка при чтении данных из файла.");
+                sendInputDataMenu(userId);
             }
         }
     }
@@ -190,7 +220,7 @@ public class Bot extends TelegramLongPollingBot {
         switch (callbackData) {
             case "qr" -> qr(userId);
             case "fileFromBank" -> fileFromBank(userId);
-            case "manualInput" -> manualInput();
+            case "manualInput" -> manualInput(userId);
             case "mainMenu" -> sendMainMenu(userId);
             case "inputData" -> sendInputDataMenu(userId);
             case "analysis" -> sendAnalysisDataMenu(userId);
@@ -237,7 +267,6 @@ public class Bot extends TelegramLongPollingBot {
      * Главное меню
      */
     private void sendMainMenu(Long id) {
-        transaction = new Transaction(id);
         operation = Operation.MAIN_MENU;
         button1 = InlineKeyboardButton.builder()
                 .text("Ввод данных")
@@ -262,7 +291,6 @@ public class Bot extends TelegramLongPollingBot {
      * 4. Выход в главное меню
      */
     private void sendInputDataMenu(Long id) {
-        transaction = new Transaction(id);
         operation = Operation.INPUT_DATA_MENU;
         button1 = InlineKeyboardButton.builder()
                 .text("QR-код")
@@ -295,6 +323,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private void qr(Long id) {
+        transaction = new Transaction(id);
         operation = Operation.QR_PHOTO;
         sendMessage(id, "Пришли фото чека, содержащего QR-код");
     }
@@ -307,6 +336,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private void fileFromBank(Long id) {
+        transaction = new Transaction(id);
         System.out.println("fileFromBank");
         String text = """
                 Я умею считывать информацию с файлов форматов .xlsx/.xls.\
@@ -318,13 +348,22 @@ public class Bot extends TelegramLongPollingBot {
         operation = Operation.INPUT_FILE;
     }
 
+    private void manualInput(Long id) {
+        transaction = new Transaction(id);
+        System.out.println("manualInput");
+        String text = """
+                Ты можешь внести конкретную трату, а я внесу необходимую информацию в базу.
+                
+                Введи дату операции:
+                """;
+        sendMessage(id, text);
+        operation = Operation.INPUT_DATE;
+    }
+
     private String inputTableFile(Document document) throws TelegramApiException {
        return getFilePath(document.getFileId());
     }
 
-    private void manualInput() {
-        System.out.println("manualInput");
-    }
 
     /**
      * Метод для получения расположения файла в облаке Telegram

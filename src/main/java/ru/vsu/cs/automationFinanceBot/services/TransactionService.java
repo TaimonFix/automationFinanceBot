@@ -18,6 +18,7 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
 
+    // TODO: Обработать случай, чтобы повторные операции не сохранялись
     public List<Transaction> addTransactions(List<Transaction> transactions) {
         return transactionRepository.saveAll(transactions);
     }
