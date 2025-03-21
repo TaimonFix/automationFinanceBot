@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 
-public class QRCode {
+public class QRCodeDTO {
 
     public static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
 
@@ -15,7 +15,7 @@ public class QRCode {
     private long fp;
     private int n;
 
-    public QRCode() {
+    public QRCodeDTO() {
     }
 
     public LocalDateTime getDateTime() {
@@ -68,8 +68,8 @@ public class QRCode {
 
     public boolean equals(final Object o) {
         if (o == this) return true;
-        if (!(o instanceof QRCode)) return false;
-        final QRCode other = (QRCode) o;
+        if (!(o instanceof QRCodeDTO)) return false;
+        final QRCodeDTO other = (QRCodeDTO) o;
         if (!other.canEqual((Object) this)) return false;
         final Object this$dateTime = this.getDateTime();
         final Object other$dateTime = other.getDateTime();
@@ -83,7 +83,7 @@ public class QRCode {
     }
 
     protected boolean canEqual(final Object other) {
-        return other instanceof QRCode;
+        return other instanceof QRCodeDTO;
     }
 
     public int hashCode() {

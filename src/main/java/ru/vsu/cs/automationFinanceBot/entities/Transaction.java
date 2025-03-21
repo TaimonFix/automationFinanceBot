@@ -1,13 +1,10 @@
-package ru.vsu.cs.automationFinanceBot.dto;
+package ru.vsu.cs.automationFinanceBot.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.util.Locale;
 
 @Entity
 @RequiredArgsConstructor

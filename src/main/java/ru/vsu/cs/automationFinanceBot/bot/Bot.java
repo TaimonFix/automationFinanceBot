@@ -15,8 +15,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.vsu.cs.automationFinanceBot.enums.Command;
 import ru.vsu.cs.automationFinanceBot.enums.Operation;
-import ru.vsu.cs.automationFinanceBot.dto.QRCode;
-import ru.vsu.cs.automationFinanceBot.dto.Transaction;
+import ru.vsu.cs.automationFinanceBot.dto.QRCodeDTO;
+import ru.vsu.cs.automationFinanceBot.entities.Transaction;
 import ru.vsu.cs.automationFinanceBot.exceptions.QRCodeRecognizeException;
 import ru.vsu.cs.automationFinanceBot.parsers.file.QRCodeReader;
 import ru.vsu.cs.automationFinanceBot.parsers.file.SberTableFileReader;
@@ -171,9 +171,9 @@ public class Bot extends TelegramLongPollingBot {
                 operation = Operation.INPUT_CATEGORY;
                 // TODO: Добавить возможность присылать PDF файл, содержащий QR код
                 // TODO: Добавить обработку нескольких изображений
-                QRCode qrCode = QRCodeReader.parse(inputQRPhoto(update.getMessage().getPhoto()));
-                transaction.setSum(qrCode.getSum());
-                transaction.setDateTime(qrCode.getDateTime());
+                QRCodeDTO qrCodeDTO = QRCodeReader.parse(inputQRPhoto(update.getMessage().getPhoto()));
+                transaction.setSum(qrCodeDTO.getSum());
+                transaction.setDateTime(qrCodeDTO.getDateTime());
                 sendMessage(update.getMessage().getFrom().getId(), "Введи категорию");
             } catch (IOException | TelegramApiException e) {
                 e.printStackTrace();

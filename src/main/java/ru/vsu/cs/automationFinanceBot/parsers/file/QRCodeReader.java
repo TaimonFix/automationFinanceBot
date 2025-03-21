@@ -3,7 +3,7 @@ package ru.vsu.cs.automationFinanceBot.parsers.file;
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
-import ru.vsu.cs.automationFinanceBot.dto.QRCode;
+import ru.vsu.cs.automationFinanceBot.dto.QRCodeDTO;
 import ru.vsu.cs.automationFinanceBot.exceptions.QRCodeRecognizeException;
 
 import javax.imageio.ImageIO;
@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 
-import static ru.vsu.cs.automationFinanceBot.dto.QRCode.FORMATTER;
+import static ru.vsu.cs.automationFinanceBot.dto.QRCodeDTO.FORMATTER;
 
 /**
  * Класс для работы с QR-кодом
@@ -52,22 +52,22 @@ public class QRCodeReader {
      * @param qr текст, полученный при чтении QR-кода
      * @return экземпляр класса QRCode, содержащий элементы QR-кода
      */
-    public static QRCode parse(String qr) {
-        QRCode qrCode = new QRCode();
+    public static QRCodeDTO parse(String qr) {
+        QRCodeDTO qrCodeDTO = new QRCodeDTO();
 
         for (String arg: qr.split("&")) {
             String[] param = arg.split("=");
 
             switch (param[0]) {
-                case "t" -> qrCode.setDateTime(LocalDateTime.parse(param[1], FORMATTER));
-                case "s" -> qrCode.setSum(Float.parseFloat(param[1]));
-                case "fn" -> qrCode.setFn(Long.parseLong(param[1]));
-                case "i" -> qrCode.setI(Integer.parseInt(param[1]));
-                case "fp" -> qrCode.setFp(Long.parseLong(param[1]));
-                case "n" -> qrCode.setN(Integer.parseInt(param[1]));
+                case "t" -> qrCodeDTO.setDateTime(LocalDateTime.parse(param[1], FORMATTER));
+                case "s" -> qrCodeDTO.setSum(Float.parseFloat(param[1]));
+                case "fn" -> qrCodeDTO.setFn(Long.parseLong(param[1]));
+                case "i" -> qrCodeDTO.setI(Integer.parseInt(param[1]));
+                case "fp" -> qrCodeDTO.setFp(Long.parseLong(param[1]));
+                case "n" -> qrCodeDTO.setN(Integer.parseInt(param[1]));
             }
         }
 
-        return qrCode;
+        return qrCodeDTO;
     }
 }

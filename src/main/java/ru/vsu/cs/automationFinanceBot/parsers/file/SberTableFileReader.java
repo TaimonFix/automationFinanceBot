@@ -1,18 +1,15 @@
 package ru.vsu.cs.automationFinanceBot.parsers.file;
 
 import org.apache.poi.ss.usermodel.*;
-import ru.vsu.cs.automationFinanceBot.dto.Transaction;
+import ru.vsu.cs.automationFinanceBot.entities.Transaction;
 import ru.vsu.cs.automationFinanceBot.exceptions.UnsupportedFileFormatException;
 import ru.vsu.cs.automationFinanceBot.parsers.date.RUSDateReader;
 
 import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 

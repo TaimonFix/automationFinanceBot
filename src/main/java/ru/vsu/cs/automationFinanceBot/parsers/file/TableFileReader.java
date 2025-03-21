@@ -1,6 +1,6 @@
 package ru.vsu.cs.automationFinanceBot.parsers.file;
 
-import ru.vsu.cs.automationFinanceBot.dto.Transaction;
+import ru.vsu.cs.automationFinanceBot.entities.Transaction;
 
 import java.util.List;
 
