@@ -2,17 +2,19 @@ package ru.vsu.cs.automationFinanceBot.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.vsu.cs.automationFinanceBot.dto.CategoryDTO;
-import ru.vsu.cs.automationFinanceBot.dto.TransactionDTO;
-import ru.vsu.cs.automationFinanceBot.entities.Transaction;
+import ru.vsu.cs.automationFinanceBot.model.dto.AnalysisDTO;
+import ru.vsu.cs.automationFinanceBot.model.dto.CategoryDTO;
+import ru.vsu.cs.automationFinanceBot.model.dto.TransactionDTO;
+import ru.vsu.cs.automationFinanceBot.model.entities.Transaction;
 import ru.vsu.cs.automationFinanceBot.repositories.TransactionRepository;
-
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 
+/**
+ * Сервис для работы с транзакциями.
+ */
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
@@ -34,24 +36,20 @@ public class TransactionService {
 
     /**
      * Поиск транзакций за определенный период
-     * @param userId идентификатор пользователя
-     * @param dateFrom дата начала периода
-     * @param dateTo дата окончания периода
+     *
+     * @param analysis объект, содержащий данные для анализа: id пользователя, дата начала и окончания анализа.
      */
-    public List<TransactionDTO> findTransactions(Long userId, LocalDateTime dateFrom, LocalDateTime dateTo) {
-        return transactionRepository.findTransactionsBetweenDateFromAndDateTo(userId, dateFrom, dateTo);
+    public List<TransactionDTO> findTransactionsBetweenDateFromAndDateTo(AnalysisDTO analysis) {
+        return transactionRepository.findTransactionsBetweenDateFromAndDateTo(analysis);
     }
 
     /**
      * Группировка транзакций по категориям за определенный период
-     * @param userId идентификатор пользователя
-     * @param dateFrom дата начала периода
-     * @param dateTo дата окончания периода
+     *
+     * @param analysis объект, содержащий данные для анализа: id пользователя, дата начала и окончания анализа.
      */
-    public List<CategoryDTO> findTransactionsGroupByCategories(Long userId,
-                                                               LocalDateTime dateFrom,
-                                                               LocalDateTime dateTo) {
-        return transactionRepository.groupByCategoryBetweenDateFromAndDateTo(userId, dateFrom, dateTo);
+    public List<CategoryDTO> findTransactionsGroupByCategories(AnalysisDTO analysis) {
+        return transactionRepository.groupByCategoryBetweenDateFromAndDateTo(analysis);
     }
 
 }

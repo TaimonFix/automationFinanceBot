@@ -3,39 +3,36 @@ package ru.vsu.cs.automationFinanceBot.repositories;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import ru.vsu.cs.automationFinanceBot.dto.CategoryDTO;
-import ru.vsu.cs.automationFinanceBot.entities.Transaction;
-import ru.vsu.cs.automationFinanceBot.dto.TransactionDTO;
+import org.springframework.stereotype.Repository;
+import ru.vsu.cs.automationFinanceBot.model.dto.AnalysisDTO;
+import ru.vsu.cs.automationFinanceBot.model.dto.CategoryDTO;
+import ru.vsu.cs.automationFinanceBot.model.entities.Transaction;
+import ru.vsu.cs.automationFinanceBot.model.dto.TransactionDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
     /**
      * Поиск транзакций за определенный период
-     * @param userId идентификатор пользователя
-     * @param dateFrom дата начала периода
-     * @param dateTo дата окончания периода
+     *
+     * @param analysis объект, содержащий данные для анализа: id пользователя, дата начала и окончания анализа.
      */
-    @Query("SELECT new ru.vsu.cs.automationFinanceBot.dto.TransactionDTO(t.dateTime, t.category, t.description, t.sum) " +
+    @Query("SELECT new ru.vsu.cs.automationFinanceBot.model.dto.TransactionDTO(t.dateTime, t.category, t.description, t.sum) " +
             "FROM Transaction t " +
-            "WHERE t.userId = :user_id AND t.dateTime BETWEEN :date_from AND :date_to")
-    List<TransactionDTO> findTransactionsBetweenDateFromAndDateTo(@Param("user_id") Long userId,
-                                                                  @Param("date_from") LocalDateTime dateFrom,
-                                                                  @Param("date_to") LocalDateTime dateTo);
+            "WHERE t.userId = :#{#analysis.userId} AND t.dateTime BETWEEN :#{#analysis.dateFrom} AND :#{#analysis.dateTo}")
+    List<TransactionDTO> findTransactionsBetweenDateFromAndDateTo(@Param("analysis") AnalysisDTO analysis);
 
     /**
      * Группировка транзакций по категориям за определенный период
-     * @param userId идентификатор пользователя
-     * @param dateFrom дата начала периода
-     * @param dateTo дата окончания периода
+     *
+     * @param analysis объект, содержащий данные для анализа: id пользователя, дата начала и окончания анализа.
      */
-    @Query("SELECT new ru.vsu.cs.automationFinanceBot.dto.CategoryDTO(t.category, SUM(t.sum)) " +
+    @Query("SELECT new ru.vsu.cs.automationFinanceBot.model.dto.CategoryDTO(t.category, SUM(t.sum)) " +
             "FROM Transaction t " +
-            "WHERE t.userId = :user_id AND t.dateTime BETWEEN :date_from AND :date_to " +
+            "WHERE t.userId = :#{#analysis.userId} AND t.dateTime BETWEEN :#{#analysis.dateFrom} AND :#{#analysis.dateTo} " +
             "GROUP BY t.category")
-    List<CategoryDTO> groupByCategoryBetweenDateFromAndDateTo(@Param("user_id") Long userId,
-                                                              @Param("date_from") LocalDateTime dateFrom,
-                                                              @Param("date_to") LocalDateTime dateTo);
+    List<CategoryDTO> groupByCategoryBetweenDateFromAndDateTo(@Param("analysis") AnalysisDTO analysis);
 }

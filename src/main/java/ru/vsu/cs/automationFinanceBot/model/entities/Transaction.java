@@ -1,4 +1,4 @@
-package ru.vsu.cs.automationFinanceBot.entities;
+package ru.vsu.cs.automationFinanceBot.model.entities;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

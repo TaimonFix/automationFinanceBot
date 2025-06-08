@@ -1,4 +1,4 @@
-package ru.vsu.cs.automationFinanceBot.enums;
+package ru.vsu.cs.automationFinanceBot.model.enums;
 
 public enum Command {
     PREFIX("/"),

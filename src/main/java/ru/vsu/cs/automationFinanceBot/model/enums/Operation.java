@@ -1,4 +1,4 @@
-package ru.vsu.cs.automationFinanceBot.enums;
+package ru.vsu.cs.automationFinanceBot.model.enums;
 
 public enum Operation {
     QR_PHOTO,
@@ -12,5 +12,6 @@ public enum Operation {
     MANUAL_INPUT,
     INPUT_DATA_MENU,
     ANALYSIS_DATA_MENU,
-    MAIN_MENU
+    MAIN_MENU,
+    NONE
 }
