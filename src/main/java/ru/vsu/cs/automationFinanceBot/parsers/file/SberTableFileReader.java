@@ -1,18 +1,15 @@
 package ru.vsu.cs.automationFinanceBot.parsers.file;
 
 import org.apache.poi.ss.usermodel.*;
-import ru.vsu.cs.automationFinanceBot.dto.Transaction;
+import ru.vsu.cs.automationFinanceBot.model.entities.Transaction;
 import ru.vsu.cs.automationFinanceBot.exceptions.UnsupportedFileFormatException;
 import ru.vsu.cs.automationFinanceBot.parsers.date.RUSDateReader;
 
 import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -73,12 +70,4 @@ public class SberTableFileReader implements TableFileReader {
         }
         return transactions;
     }
-
-
-//    public static void main(String[] args) {
-//        TableFileReader fileReader = new SberTableFileReader();
-//        List<Transaction> transactions = new ArrayList<>();
-//         transactions = fileReader.read("excel_1.xlsx");
-//        System.out.println(transactions);
-//    }
 }

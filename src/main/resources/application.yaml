@@ -11,4 +11,4 @@ spring:
     username: postgres
     password: local
 bot:
-  name: fillWordFileBot
+  name: automationFinanceBot
